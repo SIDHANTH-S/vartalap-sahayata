@@ -1,5 +1,70 @@
 // VartalapAI Business Management System Types
 
+// Database types (matching Supabase schema)
+export interface CustomerDB {
+  id: string;
+  name: string;
+  total_revenue: number;
+  total_cost: number;
+  total_profit: number;
+  profit_margin: number;
+  bill_count: number;
+  segment: string;
+  last_purchase_date: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProductDB {
+  id: string;
+  name: string;
+  cost_price: number;
+  selling_price: number;
+  stock: number;
+  reorder_threshold: number;
+  lead_time: number;
+  category: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BillDB {
+  id: string;
+  bill_number: string;
+  customer_id: string | null;
+  bill_date: string;
+  subtotal: number;
+  tax_amount: number;
+  discount_amount: number;
+  total_amount: number;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BillItemDB {
+  id: string;
+  bill_id: string;
+  product_id: string | null;
+  product_name: string;
+  quantity: number;
+  rate: number;
+  amount: number;
+  created_at: string;
+}
+
+export interface ExpenseDB {
+  id: string;
+  category: string;
+  amount: number;
+  description: string | null;
+  expense_date: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Frontend types (for UI components)
 export interface Customer {
   id: string;
   name: string;
@@ -12,7 +77,7 @@ export interface Customer {
   profitMargin: number;
   billCount: number;
   segment: 'High Value' | 'Medium Value' | 'Low Value';
-  lastPurchaseDate: Date;
+  lastPurchaseDate: Date | null;
 }
 
 export interface Product {
