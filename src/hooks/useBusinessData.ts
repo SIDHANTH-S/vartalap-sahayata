@@ -35,13 +35,19 @@ export const useBusinessData = () => {
     status: p.status as 'In Stock' | 'Low Stock' | 'Out of Stock',
   });
 
-  const transformBill = (b: BillDB): Bill => ({
+  const transformBill = (b: any): Bill => ({
     id: b.id,
     billNumber: b.bill_number,
     customerId: b.customer_id || '',
-    customerName: '', // Will need to be populated from customer data
+    customerName: b.customers?.name || '',
     date: new Date(b.bill_date),
-    items: [], // Will need to be populated from bill_items
+    items: (b.bill_items || []).map((item: any) => ({
+      productId: item.product_id || '',
+      productName: item.product_name,
+      quantity: item.quantity,
+      price: item.rate,
+      total: item.amount,
+    })),
     subtotal: b.subtotal,
     tax: b.tax_amount,
     total: b.total_amount,
@@ -73,10 +79,14 @@ export const useBusinessData = () => {
           .select('*')
           .order('created_at', { ascending: false });
         
-        // Load bills
+        // Load bills with items and customer info
         const { data: billsData } = await supabase
           .from('bills')
-          .select('*')
+          .select(`
+            *,
+            bill_items (*),
+            customers (name)
+          `)
           .order('created_at', { ascending: false });
         
         // Load expenses
@@ -198,20 +208,60 @@ export const useBusinessData = () => {
       status: 'Paid',
     };
     
-    const { data, error } = await supabase
+    const { data: billResult, error: billError } = await supabase
       .from('bills')
       .insert([billData])
       .select()
       .single();
     
-    if (!error && data) {
-      const transformedBill = transformBill(data as BillDB);
-      setBills(prev => [...prev, transformedBill]);
+    if (billError || !billResult) {
+      return { data: null, error: billError };
     }
-    return { data, error };
+
+    // Save bill items
+    const billItemsData = bill.items.map(item => ({
+      bill_id: billResult.id,
+      product_id: item.productId,
+      product_name: item.productName,
+      quantity: item.quantity,
+      rate: item.price,
+      amount: item.total,
+    }));
+
+    const { error: itemsError } = await supabase
+      .from('bill_items')
+      .insert(billItemsData);
+
+    if (itemsError) {
+      // If items failed to save, delete the bill
+      await supabase.from('bills').delete().eq('id', billResult.id);
+      return { data: null, error: itemsError };
+    }
+
+    // Transform and add to state
+    const transformedBill = transformBill(billResult as BillDB);
+    transformedBill.billNumber = billNumber;
+    transformedBill.customerName = bill.customerName;
+    transformedBill.items = bill.items;
+    transformedBill.transactionType = bill.transactionType;
+    transformedBill.remarks = bill.remarks;
+    
+    setBills(prev => [...prev, transformedBill]);
+    return { data: billResult, error: null };
   };
 
   const deleteBill = async (billId: string) => {
+    // Delete bill items first (due to foreign key constraint)
+    const { error: itemsError } = await supabase
+      .from('bill_items')
+      .delete()
+      .eq('bill_id', billId);
+    
+    if (itemsError) {
+      return { error: itemsError };
+    }
+
+    // Then delete the bill
     const { error } = await supabase
       .from('bills')
       .delete()

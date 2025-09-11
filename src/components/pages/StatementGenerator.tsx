@@ -18,6 +18,12 @@ export const StatementGenerator: React.FC = () => {
       return;
     }
     
+    if (selectedCustomer === 'all') {
+      // Generate statement logic for all customers here
+      alert(`Statement generated for all customers from ${startDate} to ${endDate}!`);
+      return;
+    }
+    
     const customer = customers.find(c => c.id === selectedCustomer);
     if (!customer) return;
 
@@ -61,7 +67,7 @@ export const StatementGenerator: React.FC = () => {
                 <SelectValue placeholder="Select Customer" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Customers</SelectItem>
+                <SelectItem value="all">All Customers</SelectItem>
                 {customers.map((customer) => (
                   <SelectItem key={customer.id} value={customer.id}>
                     {customer.name}

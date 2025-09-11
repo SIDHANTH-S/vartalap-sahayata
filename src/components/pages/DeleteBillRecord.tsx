@@ -6,52 +6,30 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useBusinessData } from '@/hooks/useBusinessData';
 
-const mockBillRecord = {
-  billNumber: '11',
-  customer: 'NANGANALLUR Grains & Grocery Shop',
-  date: '2025-09-12',
-  amount: 30000.0,
-  transactionType: 'Debit',
-  remarks: 'none',
-  items: [
-    {
-      id: 1,
-      name: 'સિવપ્પુ અંતિસ અવિરિ... 60.00',
-      quantity: 500.0,
-      price: 30000.0,
-      remarks: ''
-    },
-    {
-      id: 2,
-      name: 'પાંરિડ પાડિયા (45... 40.00',
-      quantity: 40.0,
-      price: 1500.0,
-      remarks: ''
-    }
-  ]
-};
-
 export const DeleteBillRecord: React.FC = () => {
-  const [selectedBillNumber, setSelectedBillNumber] = useState('11');
-  const [billRecord, setBillRecord] = useState(mockBillRecord);
+  const { bills, deleteBill } = useBusinessData();
+  const [selectedBillId, setSelectedBillId] = useState('');
+  const [selectedBill, setSelectedBill] = useState<any>(null);
 
-  const selectBillNumber = () => {
-    // Load bill record based on selected bill number
-    if (selectedBillNumber === '11') {
-      setBillRecord(mockBillRecord);
+  const selectBill = () => {
+    const bill = bills.find(b => b.id === selectedBillId);
+    if (bill) {
+      setSelectedBill(bill);
     }
   };
 
-  const deleteBill = () => {
-    if (window.confirm(`Are you sure you want to delete bill ${billRecord.billNumber}?`)) {
-      alert(`Bill ${billRecord.billNumber} has been deleted successfully!`);
-      // Reset the form after deletion
-      setBillRecord({
-        ...mockBillRecord,
-        billNumber: '',
-        customer: '',
-        items: []
-      });
+  const handleDeleteBill = async () => {
+    if (!selectedBill) return;
+    
+    if (window.confirm(`Are you sure you want to delete bill ${selectedBill.billNumber}?`)) {
+      const { error } = await deleteBill(selectedBill.id);
+      if (!error) {
+        alert(`Bill ${selectedBill.billNumber} has been deleted successfully!`);
+        setSelectedBill(null);
+        setSelectedBillId('');
+      } else {
+        alert('Error deleting bill. Please try again.');
+      }
     }
   };
 
@@ -65,23 +43,25 @@ export const DeleteBillRecord: React.FC = () => {
           <div className="flex items-center gap-4">
             <div>
               <Label htmlFor="bill-number">Select Bill Number:</Label>
-              <Select value={selectedBillNumber} onValueChange={setSelectedBillNumber}>
-                <SelectTrigger className="w-32">
-                  <SelectValue />
+              <Select value={selectedBillId} onValueChange={setSelectedBillId}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Select a bill" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="11">11</SelectItem>
-                  <SelectItem value="12">12</SelectItem>
-                  <SelectItem value="13">13</SelectItem>
+                  {bills.map((bill) => (
+                    <SelectItem key={bill.id} value={bill.id}>
+                      {bill.billNumber} - {bill.customerName}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
-            <Button onClick={selectBillNumber}>Load Bill</Button>
+            <Button onClick={selectBill} disabled={!selectedBillId}>Load Bill</Button>
           </div>
         </CardContent>
       </Card>
 
-      {billRecord.billNumber && (
+      {selectedBill && (
         <>
           {/* Bill Details */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -92,27 +72,27 @@ export const DeleteBillRecord: React.FC = () => {
               <CardContent className="space-y-4">
                 <div>
                   <Label>Bill Number:</Label>
-                  <div className="font-medium">{billRecord.billNumber}</div>
+                  <div className="font-medium">{selectedBill.billNumber}</div>
                 </div>
                 <div>
                   <Label>Customer:</Label>
-                  <div className="font-medium">{billRecord.customer}</div>
+                  <div className="font-medium">{selectedBill.customerName}</div>
                 </div>
                 <div>
                   <Label>Date:</Label>
-                  <div className="font-medium">{billRecord.date}</div>
+                  <div className="font-medium">{selectedBill.date.toLocaleDateString()}</div>
                 </div>
                 <div>
                   <Label>Amount:</Label>
-                  <div className="font-medium">₹{billRecord.amount.toLocaleString()}</div>
+                  <div className="font-medium">₹{selectedBill.total.toLocaleString()}</div>
                 </div>
                 <div>
                   <Label>Transaction Type:</Label>
-                  <div className="font-medium">{billRecord.transactionType}</div>
+                  <div className="font-medium">{selectedBill.transactionType}</div>
                 </div>
                 <div>
                   <Label>Remarks:</Label>
-                  <div className="font-medium">{billRecord.remarks}</div>
+                  <div className="font-medium">{selectedBill.remarks || 'None'}</div>
                 </div>
               </CardContent>
             </Card>
@@ -124,7 +104,7 @@ export const DeleteBillRecord: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-center py-8">
-                  <p className="text-3xl font-bold">₹{billRecord.amount.toLocaleString()}</p>
+                  <p className="text-3xl font-bold">₹{selectedBill.total.toLocaleString()}</p>
                   <p className="text-muted-foreground">Total Amount</p>
                 </div>
               </CardContent>
@@ -150,14 +130,14 @@ export const DeleteBillRecord: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {billRecord.items.map((item, index) => (
-                      <tr key={item.id}>
+                    {selectedBill.items.map((item, index) => (
+                      <tr key={index}>
                         <td>{index + 1}</td>
-                        <td>{item.name}</td>
+                        <td>{item.productName}</td>
                         <td>{item.quantity.toFixed(2)}</td>
                         <td>₹{item.price.toFixed(2)}</td>
-                        <td>₹{item.price.toFixed(2)}</td>
-                        <td>{item.remarks}</td>
+                        <td>₹{item.total.toFixed(2)}</td>
+                        <td>-</td>
                       </tr>
                     ))}
                   </tbody>
@@ -170,7 +150,7 @@ export const DeleteBillRecord: React.FC = () => {
           <div className="text-center">
             <Button 
               variant="destructive" 
-              onClick={deleteBill}
+              onClick={handleDeleteBill}
               className="px-8 py-3"
               size="lg"
             >

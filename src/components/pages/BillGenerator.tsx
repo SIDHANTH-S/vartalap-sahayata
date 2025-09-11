@@ -45,13 +45,13 @@ export const BillGenerator: React.FC = () => {
 
   const total = billItems.reduce((sum, item) => sum + item.total, 0);
 
-  const generateBill = () => {
+  const generateBill = async () => {
     if (!selectedCustomer || billItems.length === 0) return;
 
     const customer = customers.find(c => c.id === selectedCustomer);
     if (!customer) return;
 
-    addBill({
+    const { error } = await addBill({
       customerId: selectedCustomer,
       customerName: customer.name,
       date: new Date(date),
@@ -62,10 +62,14 @@ export const BillGenerator: React.FC = () => {
       remarks
     });
 
-    // Reset form
-    setBillItems([]);
-    setRemarks('');
-    alert('Bill generated successfully!');
+    if (!error) {
+      // Reset form
+      setBillItems([]);
+      setRemarks('');
+      alert('Bill generated successfully!');
+    } else {
+      alert('Error generating bill. Please try again.');
+    }
   };
 
   const clearForm = () => {
@@ -175,7 +179,7 @@ export const BillGenerator: React.FC = () => {
                 <Input
                   id="quantity"
                   type="number"
-                  step="0.01"
+                  step="1"
                   value={quantity}
                   onChange={(e) => setQuantity(e.target.value)}
                 />
